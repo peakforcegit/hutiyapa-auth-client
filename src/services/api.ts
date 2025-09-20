@@ -1,36 +1,36 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000',
-  withCredentials: true,
+  baseURL: 'http://localhost:3000', // Direct connection to auth server
+  withCredentials: true, // Important for cookies
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  timeout: 10000, // 10 seconds timeout
 });
 
-// Request interceptor to add auth token
+// Request interceptor
 api.interceptors.request.use(
   (config) => {
-    // Token will be added by AuthContext
+    console.log('API Request:', config.method?.toUpperCase(), config.url);
     return config;
   },
   (error) => {
+    console.error('API Request Error:', error);
     return Promise.reject(error);
   }
 );
 
-// Response interceptor to handle auth errors
+// Response interceptor - simplified to avoid unnecessary refresh attempts
 api.interceptors.response.use(
-  (res) => res,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Token expired or invalid
-      // Clear any stored tokens
-      localStorage.removeItem('accessToken');
-      delete api.defaults.headers.common['Authorization'];
-      
-      // Redirect to login if not already there
-      if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-        window.location.href = '/login';
-      }
-    }
+  (res) => {
+    console.log('API Response Success:', res.config.method?.toUpperCase(), res.config.url, res.status);
+    return res;
+  },
+  async (error) => {
+    console.error('API Response Error:', error.config?.method?.toUpperCase(), error.config?.url, error.response?.status);
+    
+    // Don't do automatic refresh attempts - let the calling code handle auth failures
     return Promise.reject(error);
   },
 );
